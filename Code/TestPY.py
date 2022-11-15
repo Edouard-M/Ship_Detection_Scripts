@@ -4,22 +4,13 @@ from skimage.io import imread
 import matplotlib.pyplot as plt 
 from math import *
 from skimage import color
-
-# Input data files are available in the "../input/" directory.
-# For example, running this (by clicking run or pressing Shift+Enter) will list the files in the input directory
-
 import os
-print(os.listdir("c:/Users/edou1/Desktop/algo_bateau/input"))
+from shapely.geometry import Point, Polygon #pip install shapely
+from multiprocessing import Process, Value, Array
 
-# Any results you write to the current directory are saved as output.
-train = os.listdir('c:/Users/edou1/Desktop/algo_bateau/input/train')
-print(len(train))
 
-test = os.listdir('c:/Users/edou1/Desktop/algo_bateau/input/test')
-print(len(test))
-submission = pd.read_csv('c:/Users/edou1/Desktop/algo_bateau/input/sample_submission.csv')
-submission.head()
 # ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
+#---------------------------------------------------------------#
 def rle_decode(mask_rle, shape=(768, 768)):
     '''
     mask_rle: run-length as string formated (start length)
@@ -34,9 +25,11 @@ def rle_decode(mask_rle, shape=(768, 768)):
     img = np.zeros(shape[0]*shape[1], dtype=np.uint8)
     for lo, hi in zip(starts, ends):
         img[lo:hi] = 1
+
     return img.reshape(shape).T  # Needed to align to RLE direction
-masks = pd.read_csv('c:/Users/edou1/Desktop/algo_bateau/input/train_ship_segmentations.csv')
-masks.head()
+#---------------------------------------------------------------#
+
+#--------------------------trouver les diagonales du rectangle et les enlever de la lsite-------------------------------#
 def get_cotes(Param_1, Param_2, Param_3, Param_4, DEBUG):
     A = Param_1
     B = Param_2
@@ -113,6 +106,9 @@ def get_cotes(Param_1, Param_2, Param_3, Param_4, DEBUG):
         #PB ICI, il manque des cas
 
     return liste_Contours_coord
+#-----------------------------------------------------------#
+
+#-------------------------trouver les 2 segments les plus longs--------------------------------#
 def get_long(liste_Contours_coord):
     long_1 = [0,0]
     long_2 = [0,0]
@@ -156,6 +152,9 @@ def get_long(liste_Contours_coord):
     liste_long = [long_1[0], long_1[1], long_2[0], long_2[1]]
 
     return liste_long
+#-----------------------------------------------------------#
+
+#-------------------------trouver les 2 segments les plus courts---------------------------#
 def get_court(liste_Contours_coord_2):
     court_1 = [0,0]
     court_2 = [0,0]
@@ -199,6 +198,9 @@ def get_court(liste_Contours_coord_2):
     liste_court = [court_1[0], court_1[1], court_2[0], court_2[1]]
 
     return liste_court
+#-----------------------------------------------------------#
+
+#----------------------limiter les bordures de l'image------------------------------#
 def limit(X_min, Y_min,X_max, Y_max, A):
     if(A[0] < X_min):
         A[0] = X_min
@@ -209,10 +211,13 @@ def limit(X_min, Y_min,X_max, Y_max, A):
     if(A[1] > Y_max):
         A[1] = Y_max
     return A
-from shapely.geometry import Point, Polygon #pip install shapely
+#-----------------------------------------------------------#
+
 #p1.within(poly)     # True
 #poly.contains(p1)   # True
 
+#-----------------------verifier q'un coord de pixel est dans une zone-----------------------------#
+#--------------------------          renvoi 0 ou 1                ---------------------------------#
 def is_within(X, A, B, C, D):
     coords = [A, B, C, D]
     poly = Polygon(coords)
@@ -225,12 +230,12 @@ def is_within(X, A, B, C, D):
 #Test exemple 1
 X1 = [24.82, 60.24]
 Test1 = is_within(X1,[24.89, 60.06], [24.75, 60.06], [24.75, 60.30], [24.89, 60.30] )
-print("Is Within ? ",Test1)
+#print("Is Within ? ",Test1)
 
 #Test exemple 2
 X2 = [24.895, 60.05]
 Test2 = is_within(X2,[24.89, 60.06], [24.75, 60.06], [24.75, 60.30], [24.89, 60.30] )
-print("Is Within ? ",Test2)
+#print("Is Within ? ",Test2)
 def get_pair(A, B, cote_1_C, cote_1_D, cote_2_C, cote_2_D):
 
     milieu_AB = [((A[0] + B[0])/2), ((A[1] + B[1])/2)]
@@ -245,6 +250,9 @@ def get_pair(A, B, cote_1_C, cote_1_D, cote_2_C, cote_2_D):
         test = 1
     
     return test
+#-----------------------------------------------------------#
+
+#----------------------pour les limites de l'image-----------------------#
 def get_MinMax(A, B, C, D):
     list = [A, B, C, D]
     max_X = 0
@@ -265,6 +273,9 @@ def get_MinMax(A, B, C, D):
     list_final = [min_X, min_Y, max_X, max_Y]
 
     return list_final
+#-----------------------------------------------------------#
+
+#-----------------------------------------------------------#
 def get_Top_Bottom_Right_Left(mask_test, DEBUG):
     left_list = []
     left_list.append([0,999])
@@ -378,7 +389,9 @@ def get_Top_Bottom_Right_Left(mask_test, DEBUG):
         print("")
 
     return [top, bottom, right, left]
+#-----------------------------------------------------------#
 
+#--------------------------- dessine le triangle de direction ------------------------#
 def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, DEBUG):
     #Dessine les croix des 4 coins
     #for i in range(10):
@@ -558,11 +571,12 @@ def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, DEBUG):
     #    img3[D2[0], D2[1]+i-5] = [0, 255, 255]
 
     return 0
+#-----------------------------------------------------------#
 
+#-------------------------- algo -------------------------#
 def algo(ImageId, DEBUG):
-    #import cv2
 
-    img = imread('c:/Users/edou1/Desktop/algo_bateau/input/train/' + ImageId)
+    img = imread(path + "/algo_bateau/input/train/" + ImageId)
     img_masks = masks.loc[masks['ImageId'] == ImageId, 'EncodedPixels'].tolist()
     #print(img_masks)
     all_m = masks.loc[masks['ImageId'] == ImageId, 'EncodedPixels']
@@ -586,7 +600,7 @@ def algo(ImageId, DEBUG):
 
 
 
-        #from skimage import color
+
         img1 = color.rgb2gray( img )
         img2 = color.rgb2lab( img )
         img3 = color.rgb2hsv( img )
@@ -637,27 +651,15 @@ def algo(ImageId, DEBUG):
         axarr[1][1].imshow(mask_test, alpha=0.4)
         axarr[1][1].imshow(mask_T3, alpha=0.4)
         plt.tight_layout(h_pad=0.1, w_pad=0.15)
-        plt.show()
+        if DEBUG > 0:
+            plt.show()
 
-        fig.savefig("c:/Users/edou1/Desktop/algo_bateau/output/R_" + ImageId)
+        fig.savefig(path + "/algo_bateau/output/R_" + ImageId)
 
     return 0
-#EncodedPixels = masks['EncodedPixels']
+#-----------------------------------------------------------#
 
-ID = masks['ImageId']
-mask_without_duplicate = pd.read_csv('c:/Users/edou1/Desktop/algo_bateau/input/train_ship_segmentations.csv')
-mask_without_duplicate.drop_duplicates(subset=['ImageId'], keep="first", inplace=True)
-mask_without_duplicate.dropna(inplace=True)
-
-serie = list(range(0,len(mask_without_duplicate),1))
-mask_without_duplicate['index'] = serie
-mask_without_duplicate.set_index('index', inplace=True)
-ID = mask_without_duplicate['ImageId']
-print(ID)
-print("ID[4] = ",ID[4])
-
-EncodedPixels = mask_without_duplicate['EncodedPixels']
-
+#--------------------- function ----------------------------#
 def function(value, ID_val, i, DEBUG):
     print("F = ", i)
     if(value != value):
@@ -667,66 +669,51 @@ def function(value, ID_val, i, DEBUG):
         algo(ID_val, DEBUG)
 
     return 0
-def testFun(yes):
-    print("Yes : " + yes)
-    return 0
-from multiprocessing import Process, Value, Array
+#-----------------------------------------------------------#
 
-if __name__ == '__main__':
-    p1 = Process(target=testFun, args=("yes 1"))
-    p2 = Process(target=testFun, args=("yes 2"))
-    p3 = Process(target=testFun, args=("yes 3"))
+path = 'c:/Users/edou1/Desktop' #chemin du projet : A MODIFIER POUR CHAQUE PERSONNE
 
-    p1.start()
-    p2.start()
-    p3.start()
+print(os.listdir(path + "/algo_bateau/input"))
+
+# Any results you write to the current directory are saved as output.
+train = os.listdir(path + "/algo_bateau/input/train")
+print(len(train))
+
+test = os.listdir(path + "/algo_bateau/input/test")
+print(len(test))
+submission = pd.read_csv(path + "/algo_bateau/input/sample_submission.csv")
+submission.head()
+
+masks = pd.read_csv(path + "/algo_bateau/input/train_ship_segmentations.csv")
+#masks.head()
+
+#EncodedPixels = masks['EncodedPixels']
+
+ID = masks['ImageId']
+mask_without_duplicate = pd.read_csv(path + "/algo_bateau/input/train_ship_segmentations.csv")
+mask_without_duplicate.drop_duplicates(subset=['ImageId'], keep="first", inplace=True)
+mask_without_duplicate.dropna(inplace=True)
+
+serie = list(range(0,len(mask_without_duplicate),1))
+mask_without_duplicate['index'] = serie
+mask_without_duplicate.set_index('index', inplace=True)
+ID = mask_without_duplicate['ImageId']
+#print(ID)
+#print("ID[4] = ",ID[4])
+
+EncodedPixels = mask_without_duplicate['EncodedPixels']
+
 data_lenght = len(mask_without_duplicate)
 print("Number of Images = ", data_lenght)
 print("")
 
-#import _thread
-from multiprocessing import Process, Value, Array
-#from multiprocessing import Pool
-#from multiprocessing import mp
 
-DEBUG = 0                           # 0 affiche que l'image, 1 affiche l'image et le test des couleurs, 2 affiche tout
-Start_at_Image = 0                  
-Number_Of_Images_To_Process = 10
+
+DEBUG = 0                                   # 0 affiche que l'image, 1 affiche l'image et le test des couleurs, 2 affiche tout
+Start_at_Image = 0                          # de l'image N°x
+Number_Of_Images_To_Process = 20           # jusqu'à l'image N°x
 
 if __name__ == '__main__':
     for i in range(Start_at_Image,(Start_at_Image+Number_Of_Images_To_Process)):
         p = Process(target=function, args=(EncodedPixels[i], ID[i], i, DEBUG,))
         p.start()
-        #p1 = mp.Process(target=function, args=(EncodedPixels[0], ID[0], 0, DEBUG,)).start()
-        #p2 = mp.Process(target=function, args=(EncodedPixels[1], ID[1], 1, DEBUG,)).start()
-        #p3 = mp.Process(target=function, args=(EncodedPixels[2], ID[2], 2, DEBUG,)).start()
-
-        #p1.start()
-        #p2.start()
-        #p3.start()
-        
-        #p1 = Process(target=function, args=(EncodedPixels[i], ID[i], i, DEBUG)).start()
-        #p.map(f, [1, 2, 3])
-
-
-#for i in range(Start_at_Image,(Start_at_Image+Number_Of_Images_To_Process)):
-    #_thread.start_new_thread(function), (EncodedPixels[i], ID[i], i, DEBUG )
-
-
-# 6min 17s pour 0 à 10
-#for i in range(Start_at_Image,(Start_at_Image+Number_Of_Images_To_Process)):
-#    function(EncodedPixels[i], ID[i], i, DEBUG)
-
-#  pour 0 à 10 (max_workers=16)
-#with ThreadPoolExecutor(max_workers=16) as executor:
-    #for i in range(0,10):
-        #executor.map(function,EncodedPixels[i], ID[i], i)
-
-#ImageId = '00b0fa633.jpg'
-#ImageId = '00e603959.jpg'
-#ImageId = '00c9a7ed3.jpg' #ça bug
-ImageId = '014586e74.jpg' #ça bug
-
-DEBUG = 2           # 0 affiche que l'image, 1 affiche l'image et le test des couleurs, 2 affiche tout
-
-algo(ImageId, DEBUG)
