@@ -8,7 +8,9 @@ import os
 from shapely.geometry import Point, Polygon #pip install shapely
 from multiprocessing import Process, Value, Array, Pool
 
-path = 'c:/Users/dwans/documents/GitHub/algo_bateaux' #chemin du projet : A MODIFIER POUR CHAQUE PERSONNE
+path = 'C:/Users/edou1/Desktop/algo_bateau' #chemin du projet : A MODIFIER POUR CHAQUE PERSONNE
+#Clément : 'c:/Users/dwans/documents/GitHub/algo_bateaux'
+#Edouard : 'C:/Users/edou1/Desktop/algo_bateau'
 
 print(os.listdir(path + "/input"))
 
@@ -233,6 +235,7 @@ def get_court(liste_Contours_coord_2):
 #----------------------limiter les bordures de l'image------------------------------#
 def limit(X_min, Y_min,X_max, Y_max, A):
     if(A[0] < X_min):
+        A[0] - X_min
         A[0] = X_min
     if(A[1] < Y_min):
         A[1] = Y_min
@@ -422,7 +425,7 @@ def get_Top_Bottom_Right_Left(mask_test, DEBUG):
 #-----------------------------------------------------------#
 
 #--------------------------- dessine le triangle de direction ------------------------#
-def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, DEBUG):
+def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, imgTest,DEBUG):
     #Dessine les croix des 4 coins
     #for i in range(10):
     #    img[top[0]+i-5, top[1]] = [0, 255, 0]
@@ -451,24 +454,32 @@ def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, DEBUG):
     D = [(int)(constant*(long_2[0][0]-long_2[1][0]))+long_2[0][0],(int)(constant*(long_2[0][1]-long_2[1][1]))+long_2[0][1]]
     B = [(int)(constant*(long_2[1][0]-long_2[0][0]))+long_2[1][0],(int)(constant*(long_2[1][1]-long_2[0][1]))+long_2[1][1]]
     #On limite leur position pour être sur que ça ne dépasse pas de l'image
-    A = limit(5,5,760,760,A)
-    B = limit(5,5,760,760,B)
-    C = limit(5,5,760,760,C)
-    D = limit(5,5,760,760,D)
+    #A = limit(0,0,767,767,A)
+    #B = limit(0,0,767,767,B)
+    #C = limit(0,0,767,767,C)
+    #D = limit(0,0,767,767,D)
 
 
     #A1 = liste_court_2[0]
     #B1 = liste_court_2[1]
     A1 = B
     B1 = A
+
     A2 = C
     B2 = D
+
+    #C1 = court_2[0]
+    #D1 = court_2[1]
+    #C2 = court_1[0]
+    #D2 = court_1[1]
+    
     T1 = court_1[0]
     T2 = court_1[1]
     T3 = court_2[0]
     T4 = court_2[1]
     A1_p = A1
     B1_p = B1
+
     test_val = get_pair(A1_p,B1_p,T1,T2,T3,T4)
     if(test_val == 0):
         C1 = court_1[0]
@@ -482,15 +493,8 @@ def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, DEBUG):
 
         C2 = court_1[0]
         D2 = court_1[1]
+    
 
-    #m = 0
-    #if((B1[0]-A1[0])!=0):
-    #    m = (B1[1]-A1[1])/(B1[0]-A1[0]) #m=(yB−yA)/(xB−xA)
-    #p = A1[1] - m*A1[0] #p=yA−mxA
-
-    #for i in range(700):
-    #    y = m*A1[0] + p
-    #    img[A1[0], y] = [0, 255, 0]
     if(DEBUG>1):
         print("A1 = ",A1)
         print("B1 = ",B1)
@@ -507,28 +511,39 @@ def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, DEBUG):
     Min = [liste_MinMax[0],liste_MinMax[1]]
     Max = [liste_MinMax[2],liste_MinMax[3]]
     i = 0
+    cpt_px_vert = 0
+    cpt_px_rouge = 0
     for i in range(Min[0], Max[0]):
         for j in range(Min[1], Max[1]):
-            if(is_within([i,j],A1,B1,C1,D1) == True): #zone verte
+            if((is_within([i,j],A1,B1,C1,D1) == True) and (i>=0) and (j>=0) and (i<=767) and (j<=767)): #zone verte
                 color1 += img3[i,j]
                 mask_T3[i,j] = 1
+                cpt_px_vert+=1
                 #img3[i,j] = [0, 255, 0]
+                imgTest[i,j] = [0, 255, 0]
 
     liste_MinMax = get_MinMax(A2,B2,C2,D2)
     Min = [liste_MinMax[0],liste_MinMax[1]]
     Max = [liste_MinMax[2],liste_MinMax[3]]           
     for i in range(Min[0], Max[0]):
         for j in range(Min[1], Max[1]):
-            if(is_within([i,j],A2,B2,C2,D2) == True): #zone rouge
+            if((is_within([i,j],A2,B2,C2,D2) == True) and (i>=0) and (j>=0) and (i<=767) and (j<=767)): #zone rouge
                 color2 += img3[i,j]
                 mask_T3[i,j] = 1
+                cpt_px_rouge+=1
                 #img3[i,j] = [255, 0, 0]
+                imgTest[i,j] = [255, 0, 0]
     if(DEBUG>0):
         print("Zone Verte = ", color1)
         print("Zone Rouge = ", color2)
     #On regarde la dose de Bleu + Rouge = mauve (+de mauve = + de trainée)
-    couleur_total_1 = (color1[2]+(color1[0]/4))
-    couleur_total_2 = (color2[2]+(color2[0]/4))
+    couleur_total_1 = 0
+    if(cpt_px_vert>0):
+        couleur_total_1 = (color1[2]+(color1[0]/4))/cpt_px_vert
+    couleur_total_2 = 0
+    if(cpt_px_rouge>0):
+        couleur_total_2 = (color2[2]+(color2[0]/4))/cpt_px_rouge
+        
     if(DEBUG>0):
         print("Zone Verte = ", couleur_total_1)
         print("Zone Rouge = ", couleur_total_2)
@@ -543,7 +558,8 @@ def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, DEBUG):
         for i in range(Min[0], Max[0]):
             for j in range(Min[1], Max[1]):
                 if(is_within([i,j],front,front,C2,D2) == True): #zone verte
-                    #mask_T2[i,j] = [0, 255, 0]
+                    #img3[i,j] = [255, 0, 0]
+                    #imgTest[i,j] = [0, 0, 255]
                     mask_T2[i,j] = 1
     else:
         if(DEBUG>0):
@@ -556,49 +572,52 @@ def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, DEBUG):
         for i in range(Min[0], Max[0]):
             for j in range(Min[1], Max[1]):
                 if(is_within([i,j],front,front,C1,D1) == True): #zone verte
-                    #mask_T2[i,j] = [255, 0, 0]
+                    #img3[i,j] = [0, 255, 0]
+                    #imgTest[i,j] = [0, 0, 255]
                     mask_T2[i,j] = 1
 
 
     #Dessine 4 nouvelles crois pour voir de quel côté est la trainée
-    #i = 0
-    #for i in range(10):
-    #    img[A1[0]+i-5, A1[1]] = [255, 0, 255]
-    #    img[A1[0], A1[1]+i-5] = [255, 0, 255]
-    #    img[B1[0]+i-5, B1[1]] = [255, 0, 0]
-    #    img[B1[0], B1[1]+i-5] = [255, 0, 0]
-    #    img[C1[0]+i-5, C1[1]] = [0, 255, 0]
-    #    img[C1[0], C1[1]+i-5] = [0, 255, 0]
-    #    img[D1[0]+i-5, D1[1]] = [0, 255, 255]
-    #    img[D1[0], D1[1]+i-5] = [0, 255, 255]
+    """"
+    i = 0
+    for i in range(10):
+        img[A1[0]+i-5, A1[1]] = [255, 0, 255]
+        img[A1[0], A1[1]+i-5] = [255, 0, 255]
+        img[B1[0]+i-5, B1[1]] = [255, 0, 0]
+        img[B1[0], B1[1]+i-5] = [255, 0, 0]
+        img[C1[0]+i-5, C1[1]] = [0, 255, 0]
+        img[C1[0], C1[1]+i-5] = [0, 255, 0]
+        img[D1[0]+i-5, D1[1]] = [0, 255, 255]
+        img[D1[0], D1[1]+i-5] = [0, 255, 255]
 
-    #    img[A2[0]+i-5, A2[1]] = [255, 0, 255]
-    #    img[A2[0], A2[1]+i-5] = [255, 0, 255]
-    #    img[B2[0]+i-5, B2[1]] = [255, 0, 0]
-    #    img[B2[0], B2[1]+i-5] = [255, 0, 0]
-    #    img[C2[0]+i-5, C2[1]] = [0, 255, 0]
-    #    img[C2[0], C2[1]+i-5] = [0, 255, 0]
-    #    img[D2[0]+i-5, D2[1]] = [0, 255, 255]
-    #    img[D2[0], D2[1]+i-5] = [0, 255, 255]
+        img[A2[0]+i-5, A2[1]] = [255, 0, 255]
+        img[A2[0], A2[1]+i-5] = [255, 0, 255]
+        img[B2[0]+i-5, B2[1]] = [255, 0, 0]
+        img[B2[0], B2[1]+i-5] = [255, 0, 0]
+        img[C2[0]+i-5, C2[1]] = [0, 255, 0]
+        img[C2[0], C2[1]+i-5] = [0, 255, 0]
+        img[D2[0]+i-5, D2[1]] = [0, 255, 255]
+        img[D2[0], D2[1]+i-5] = [0, 255, 255]
 
-    #for i in range(10):
-    #    img3[A1[0]+i-5, A1[1]] = [255, 0, 255]
-    #    img3[A1[0], A1[1]+i-5] = [255, 0, 255]
-    #    img3[B1[0]+i-5, B1[1]] = [255, 0, 0]
-    #    img3[B1[0], B1[1]+i-5] = [255, 0, 0]
-    #    img3[C1[0]+i-5, C1[1]] = [0, 255, 0]
-    #    img3[C1[0], C1[1]+i-5] = [0, 255, 0]
-    #    img3[D1[0]+i-5, D1[1]] = [0, 255, 255]
-    #    img3[D1[0], D1[1]+i-5] = [0, 255, 255]
+    for i in range(10):
+        img3[A1[0]+i-5, A1[1]] = [255, 0, 255]
+        img3[A1[0], A1[1]+i-5] = [255, 0, 255]
+        img3[B1[0]+i-5, B1[1]] = [255, 0, 0]
+        img3[B1[0], B1[1]+i-5] = [255, 0, 0]
+        img3[C1[0]+i-5, C1[1]] = [0, 255, 0]
+        img3[C1[0], C1[1]+i-5] = [0, 255, 0]
+        img3[D1[0]+i-5, D1[1]] = [0, 255, 255]
+        img3[D1[0], D1[1]+i-5] = [0, 255, 255]
 
-    #    img3[A2[0]+i-5, A2[1]] = [255, 0, 255]
-    #    img3[A2[0], A2[1]+i-5] = [255, 0, 255]
-    #    img3[B2[0]+i-5, B2[1]] = [255, 0, 0]
-    #    img3[B2[0], B2[1]+i-5] = [255, 0, 0]
-    #    img3[C2[0]+i-5, C2[1]] = [0, 255, 0]
-    #    img3[C2[0], C2[1]+i-5] = [0, 255, 0]
-    #    img3[D2[0]+i-5, D2[1]] = [0, 255, 255]
-    #    img3[D2[0], D2[1]+i-5] = [0, 255, 255]
+        img3[A2[0]+i-5, A2[1]] = [255, 0, 255]
+        img3[A2[0], A2[1]+i-5] = [255, 0, 255]
+        img3[B2[0]+i-5, B2[1]] = [255, 0, 0]
+        img3[B2[0], B2[1]+i-5] = [255, 0, 0]
+        img3[C2[0]+i-5, C2[1]] = [0, 255, 0]
+        img3[C2[0], C2[1]+i-5] = [0, 255, 0]
+        img3[D2[0]+i-5, D2[1]] = [0, 255, 255]
+        img3[D2[0], D2[1]+i-5] = [0, 255, 255]
+        """
 
     return 0
 #-----------------------------------------------------------#
@@ -630,7 +649,7 @@ def algo(ImageId, DEBUG):
 
 
 
-
+        imgTest = imread(path + "/input/train/" + ImageId)
         img1 = color.rgb2gray( img )
         img2 = color.rgb2lab( img )
         img3 = color.rgb2hsv( img )
@@ -652,7 +671,7 @@ def algo(ImageId, DEBUG):
             mask_test = np.zeros((768, 768))
             mask_test += rle_decode(all_m.iloc[i])
             new_list = get_Top_Bottom_Right_Left(mask_test, DEBUG)
-            get_triangle(new_list[0], new_list[1], new_list[2], new_list[3], img, img3, mask_T2, mask_T3, DEBUG)
+            get_triangle(new_list[0], new_list[1], new_list[2], new_list[3], img, img3, mask_T2, mask_T3, imgTest, DEBUG)
 
 
         all_masks = np.zeros((768, 768))
@@ -677,9 +696,11 @@ def algo(ImageId, DEBUG):
         axarr[0][1].imshow(mask_T2, alpha=0.8)
         axarr[1][0].imshow(img3)
         #axarr[1][1].imshow(mask_test)
-        axarr[1][1].imshow(img)
-        axarr[1][1].imshow(mask_test, alpha=0.4)
-        axarr[1][1].imshow(mask_T3, alpha=0.4)
+        #axarr[1][1].imshow(img)
+        #axarr[1][1].imshow(mask_test, alpha=0.4)
+        #axarr[1][1].imshow(mask_T3, alpha=0.4)
+        axarr[1][1].imshow(imgTest)
+
         plt.tight_layout(h_pad=0.1, w_pad=0.15)
         if DEBUG > 0:
             plt.show()
@@ -691,7 +712,7 @@ def algo(ImageId, DEBUG):
 
 #--------------------- function ----------------------------#
 def function(i):
-    DEBUG=0
+    DEBUG=0 # 0 affiche que l'image, 1 affiche l'image et le test des couleurs, 2 affiche tout
     value = EncodedPixels[i]
     ID_val=ID[i]
     print("F = ", i)
@@ -704,22 +725,27 @@ def function(i):
     return 0
 #-----------------------------------------------------------#
 
+#debug une image en particulier
+#algo("014586e74.jpg", 2)
+
 
 
 data_lenght = len(mask_without_duplicate)
 print("Number of Images = ", data_lenght)
 print("")
 
-
-
-DEBUG = 0                                   # 0 affiche que l'image, 1 affiche l'image et le test des couleurs, 2 affiche tout
 Start_at_Image = 0                          # de l'image N°x
-Number_Of_Images_To_Process = 20           # jusqu'à l'image N°x
+Number_Of_Images_To_Process = 100             # nombre d'images à faire
+
+Number_Of_Processes = 10
+
+
+
 if __name__ == '__main__':
-    pool = Pool(20)
+    pool = Pool(Number_Of_Processes)
     with pool:
-        pool.map(function,range(100))
+        pool.map(function,range(Start_at_Image, (Start_at_Image + Number_Of_Images_To_Process)))
         pool.close()
         pool.join()
-       
+
         
