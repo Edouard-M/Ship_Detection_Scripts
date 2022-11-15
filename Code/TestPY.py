@@ -6,9 +6,39 @@ from math import *
 from skimage import color
 import os
 from shapely.geometry import Point, Polygon #pip install shapely
-from multiprocessing import Process, Value, Array
+from multiprocessing import Process, Value, Array, Pool
 
+path = 'c:/Users/dwans/documents/GitHub/algo_bateaux' #chemin du projet : A MODIFIER POUR CHAQUE PERSONNE
 
+print(os.listdir(path + "/input"))
+
+# Any results you write to the current directory are saved as output.
+train = os.listdir(path + "/input/train")
+print(len(train))
+
+test = os.listdir(path + "/input/test")
+print(len(test))
+submission = pd.read_csv(path + "/input/sample_submission.csv")
+submission.head()
+
+masks = pd.read_csv(path + "/input/train_ship_segmentations.csv")
+#masks.head()
+
+#EncodedPixels = masks['EncodedPixels']
+
+ID = masks['ImageId']
+mask_without_duplicate = pd.read_csv(path + "/input/train_ship_segmentations.csv")
+mask_without_duplicate.drop_duplicates(subset=['ImageId'], keep="first", inplace=True)
+mask_without_duplicate.dropna(inplace=True)
+
+serie = list(range(0,len(mask_without_duplicate),1))
+mask_without_duplicate['index'] = serie
+mask_without_duplicate.set_index('index', inplace=True)
+ID = mask_without_duplicate['ImageId']
+#print(ID)
+#print("ID[4] = ",ID[4])
+
+EncodedPixels = mask_without_duplicate['EncodedPixels']
 # ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
 #---------------------------------------------------------------#
 def rle_decode(mask_rle, shape=(768, 768)):
@@ -576,7 +606,7 @@ def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, DEBUG):
 #-------------------------- algo -------------------------#
 def algo(ImageId, DEBUG):
 
-    img = imread(path + "/algo_bateau/input/train/" + ImageId)
+    img = imread(path + "/input/train/" + ImageId)
     img_masks = masks.loc[masks['ImageId'] == ImageId, 'EncodedPixels'].tolist()
     #print(img_masks)
     all_m = masks.loc[masks['ImageId'] == ImageId, 'EncodedPixels']
@@ -654,13 +684,16 @@ def algo(ImageId, DEBUG):
         if DEBUG > 0:
             plt.show()
 
-        fig.savefig(path + "/algo_bateau/output/R_" + ImageId)
+        fig.savefig(path + "/output/R_" + ImageId)
 
     return 0
 #-----------------------------------------------------------#
 
 #--------------------- function ----------------------------#
-def function(value, ID_val, i, DEBUG):
+def function(i):
+    DEBUG=0
+    value = EncodedPixels[i]
+    ID_val=ID[i]
     print("F = ", i)
     if(value != value):
         print(i, " : No Data")
@@ -671,37 +704,7 @@ def function(value, ID_val, i, DEBUG):
     return 0
 #-----------------------------------------------------------#
 
-path = 'c:/Users/edou1/Desktop' #chemin du projet : A MODIFIER POUR CHAQUE PERSONNE
 
-print(os.listdir(path + "/algo_bateau/input"))
-
-# Any results you write to the current directory are saved as output.
-train = os.listdir(path + "/algo_bateau/input/train")
-print(len(train))
-
-test = os.listdir(path + "/algo_bateau/input/test")
-print(len(test))
-submission = pd.read_csv(path + "/algo_bateau/input/sample_submission.csv")
-submission.head()
-
-masks = pd.read_csv(path + "/algo_bateau/input/train_ship_segmentations.csv")
-#masks.head()
-
-#EncodedPixels = masks['EncodedPixels']
-
-ID = masks['ImageId']
-mask_without_duplicate = pd.read_csv(path + "/algo_bateau/input/train_ship_segmentations.csv")
-mask_without_duplicate.drop_duplicates(subset=['ImageId'], keep="first", inplace=True)
-mask_without_duplicate.dropna(inplace=True)
-
-serie = list(range(0,len(mask_without_duplicate),1))
-mask_without_duplicate['index'] = serie
-mask_without_duplicate.set_index('index', inplace=True)
-ID = mask_without_duplicate['ImageId']
-#print(ID)
-#print("ID[4] = ",ID[4])
-
-EncodedPixels = mask_without_duplicate['EncodedPixels']
 
 data_lenght = len(mask_without_duplicate)
 print("Number of Images = ", data_lenght)
@@ -712,8 +715,11 @@ print("")
 DEBUG = 0                                   # 0 affiche que l'image, 1 affiche l'image et le test des couleurs, 2 affiche tout
 Start_at_Image = 0                          # de l'image N°x
 Number_Of_Images_To_Process = 20           # jusqu'à l'image N°x
-
 if __name__ == '__main__':
-    for i in range(Start_at_Image,(Start_at_Image+Number_Of_Images_To_Process)):
-        p = Process(target=function, args=(EncodedPixels[i], ID[i], i, DEBUG,))
-        p.start()
+    pool = Pool(20)
+    with pool:
+        pool.map(function,range(100))
+        pool.close()
+        pool.join()
+       
+        
