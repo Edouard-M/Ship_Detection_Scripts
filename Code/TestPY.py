@@ -425,7 +425,7 @@ def get_Top_Bottom_Right_Left(mask_test, DEBUG):
 #-----------------------------------------------------------#
 
 #--------------------------- dessine le triangle de direction ------------------------#
-def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, imgTest,DEBUG):
+def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, imgTest, ImageId, DEBUG):
     #Dessine les croix des 4 coins
     #for i in range(10):
     #    img[top[0]+i-5, top[1]] = [0, 255, 0]
@@ -547,7 +547,12 @@ def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, imgTest,
     if(DEBUG>0):
         print("Zone Verte = ", couleur_total_1)
         print("Zone Rouge = ", couleur_total_2)
+
+    arriere_1 = [0,0]
+    arriere_2 = [0,0]
     if(couleur_total_1 < couleur_total_2):
+        arriere_1 = C2
+        arriere_2 = D2
         if(DEBUG>0):
             print("La zone Verte est l'avant !")
         liste_MinMax = get_MinMax(C1,D1,C2,D2)
@@ -562,6 +567,8 @@ def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, imgTest,
                     #imgTest[i,j] = [0, 0, 255]
                     mask_T2[i,j] = 1
     else:
+        arriere_1 = C1
+        arriere_2 = D1
         if(DEBUG>0):
             print("La zone Rouge est l'avant !")
         liste_MinMax = get_MinMax(C1,D1,C2,D2)
@@ -576,8 +583,77 @@ def get_triangle(top, bottom, right, left, img, img3, mask_T2, mask_T3, imgTest,
                     #imgTest[i,j] = [0, 0, 255]
                     mask_T2[i,j] = 1
 
+    
+    x = 1
+    y = 0
+
+    print("#######################################")
+    print("Top    x = ",top[x] ,  "   y = ",top[y] )
+    print("Bottom x = ",bottom[x] ,  "   y = ",bottom[y] )
+    print("Right  x = ",right[x] ,  "   y = ",right[y] )
+    print("Left   x = ",left[x] ,  "   y = ",left[y] )
+    print("#######################################")
+
+    Bateau_center = [0,0]
+    Bateau_center[y] = (top[y] + bottom[y])/2
+    Bateau_center[x] = (left[x] + right[x])/2
+    Bateau_lx = right[x]-left[x]
+    Bateau_ly = bottom[y]-top[y]
+
+
+    avant = front
+
+    if(avant[y] > (arriere_1[y] and arriere_2[y])):
+        if(arriere_1[x] < arriere_2[x]):
+            arriere_d = arriere_1
+            arriere_g = arriere_2
+        else:
+            arriere_d = arriere_2
+            arriere_g = arriere_1
+    elif(avant[y] < (arriere_1[y] and arriere_2[y])): 
+        if(arriere_1[x] > arriere_2[x]):
+            arriere_d = arriere_1
+            arriere_g = arriere_2
+        else:
+            arriere_d = arriere_2
+            arriere_g = arriere_1
+    elif(avant[x] > arriere_1[x]): 
+        if(arriere_1[y] > arriere_2[y]):
+            arriere_d = arriere_1
+            arriere_g = arriere_2
+        else:
+            arriere_d = arriere_2
+            arriere_g = arriere_1
+    else: 
+        if(arriere_1[y] < arriere_2[y]):
+            arriere_d = arriere_1
+            arriere_g = arriere_2
+        else:
+            arriere_d = arriere_2
+            arriere_g = arriere_1
+
+
+    #arriere_g = C2 ou D2 ?
+    #arriere_d = C2 ou D2 ?
+    
+    write_file(Bateau_center, Bateau_lx, Bateau_ly, avant, arriere_g, arriere_d, imgTest, ImageId, DEBUG)
+    #write_file(bateau, bateau_lx, bateau_ly, avant, arriere_g, arriere_d):
 
     #Dessine 4 nouvelles crois pour voir de quel côté est la trainée
+
+    """"
+    for i in range(10):
+        imgTest[int(Bateau_center[x]+i-5), int(Bateau_center[y])] = [255, 0, 255]
+        imgTest[int(Bateau_center[x]), int(Bateau_center[y]+i-5)] = [255, 0, 255]
+
+        imgTest[int(Bateau_center[x]-Bateau_lx+i-5), int(Bateau_center[y]-Bateau_ly)] = [255, 0, 255]
+        imgTest[int(Bateau_center[x]-Bateau_lx), int(Bateau_center[y]-Bateau_ly+i-5)] = [255, 0, 255]
+
+        imgTest[int(Bateau_center[x]+Bateau_lx+i-5), int(Bateau_center[y]+Bateau_ly)] = [255, 0, 255]
+        imgTest[int(Bateau_center[x]+Bateau_lx), int(Bateau_center[y]+Bateau_ly+i-5)] = [255, 0, 255]
+    """
+
+
     """"
     i = 0
     for i in range(10):
@@ -671,7 +747,7 @@ def algo(ImageId, DEBUG):
             mask_test = np.zeros((768, 768))
             mask_test += rle_decode(all_m.iloc[i])
             new_list = get_Top_Bottom_Right_Left(mask_test, DEBUG)
-            get_triangle(new_list[0], new_list[1], new_list[2], new_list[3], img, img3, mask_T2, mask_T3, imgTest, DEBUG)
+            get_triangle(new_list[0], new_list[1], new_list[2], new_list[3], img, img3, mask_T2, mask_T3, imgTest, ImageId, DEBUG)
 
 
         all_masks = np.zeros((768, 768))
@@ -710,6 +786,129 @@ def algo(ImageId, DEBUG):
     return 0
 #-----------------------------------------------------------#
 
+def write_file(bateau, bateau_lx, bateau_ly, avant, arriere_g, arriere_d, imgTest, ImageId, DEBUG):
+    marge = 6
+    bateau_lx += marge
+    bateau_ly += marge
+    x = 1
+    y = 0
+    print("-----------------------------------------------------------------------------------------")
+    print("Bateau : x = ", bateau[x], " y = ", bateau[y], " lx = ", bateau_lx, " ly = ", bateau_ly)
+    print("Avant  : x = ", avant[x], " y = ", avant[y])
+    print("Arriere Gauche : x = ", arriere_g[x], " y = ", arriere_g[y])
+    print("Arriere Droit  : x = ", arriere_d[x], " y = ", arriere_d[y])
+
+    coin_Top_Left = [bateau[x]-(bateau_lx/2), bateau[y]-(bateau_ly/2)]
+    coin_Bottom_Right = [bateau[x]+(bateau_lx/2), bateau[y]+(bateau_ly/2)]
+
+    print("Centre - Lx = ", coin_Top_Left[0])
+    print("Centre - Ly = ", coin_Top_Left[1])
+    print("Centre + Lx = ", coin_Bottom_Right[0])
+    print("Centre + Ly = ", coin_Bottom_Right[1])
+    print("-----------------------------------------------------------------------------------------")
+
+    x=0
+    y=1
+    #imgTest[y,x] : l'image marche à l'envers dans cette bibliothèque de mort, 100% sûr
+
+    #Trace Rectangle LX
+    for i in range(bateau_lx):
+        if((coin_Top_Left[1]) >= 0 and (coin_Top_Left[1]) <= 767 and (coin_Top_Left[0]+i) >= 0 and (coin_Top_Left[0]+i) <= 767):
+            imgTest[int(coin_Top_Left[1]), int(coin_Top_Left[0]+i)] = [255, 0, 255]
+        if((coin_Bottom_Right[1]) >= 0 and (coin_Bottom_Right[1]) <= 767 and (coin_Bottom_Right[0]-i) >= 0 and (coin_Bottom_Right[0]-i) <= 767):
+            imgTest[int(coin_Bottom_Right[1]), int(coin_Bottom_Right[0]-i)] = [255, 0, 255]
+
+    #Trace Rectangle LY
+    for i in range(bateau_ly):
+        if((coin_Top_Left[1]+i) >= 0 and (coin_Top_Left[1]+i) <= 767 and (coin_Top_Left[0]) >= 0 and (coin_Top_Left[0]) <= 767):
+            imgTest[int(coin_Top_Left[1]+i), int(coin_Top_Left[0])] = [255, 0, 255]
+        if((coin_Bottom_Right[1]-i) >= 0 and (coin_Bottom_Right[1]-i) <= 767 and (coin_Bottom_Right[0]) >= 0 and (coin_Bottom_Right[0]) <= 767):
+            imgTest[int(coin_Bottom_Right[1]-i), int(coin_Bottom_Right[0])] = [255, 0, 255]
+
+
+    #Trace les points
+    for i in range(10):
+        #Tracer centre
+        if((bateau[x]+i-5) >= 0 and (bateau[x]+i-5) <= 767):
+            imgTest[int(bateau[x]+i-5), int(bateau[y])] = [255, 0, 255]
+        if((bateau[y]+i-5) >= 0 and (bateau[y]+i-5) <= 767):
+            imgTest[int(bateau[x]), int(bateau[y]+i-5)] = [255, 0, 255]
+
+        #Tracer coin carré Haut
+        if((coin_Top_Left[1]+i-5) >= 0 and (coin_Top_Left[1]+i-5) <= 767 and (coin_Top_Left[0]) >= 0 and (coin_Top_Left[0]) <= 767):
+            imgTest[int(coin_Top_Left[1]+i-5), int(coin_Top_Left[0])] = [255, 0, 255]
+        if((coin_Top_Left[0]+i-5) >= 0 and (coin_Top_Left[0]+i-5) <= 767 and (coin_Top_Left[1]) >= 0 and (coin_Top_Left[1]) <= 767):
+            imgTest[int(coin_Top_Left[1]), int(coin_Top_Left[0]+i-5)] = [255, 0, 255]
+
+        #Tracer coin carré Bas
+        if((coin_Bottom_Right[1]+i-5) >= 0 and (coin_Bottom_Right[1]+i-5) <= 767 and (coin_Bottom_Right[0]) >= 0 and (coin_Bottom_Right[0]) <= 767):
+            imgTest[int(coin_Bottom_Right[1]+i-5), int(coin_Bottom_Right[0])] = [255, 0, 255]
+        if((coin_Bottom_Right[0]+i-5) >= 0 and (coin_Bottom_Right[0]+i-5) <= 767 and (coin_Bottom_Right[1]) >= 0 and (coin_Bottom_Right[1]) <= 767):
+            imgTest[int(coin_Bottom_Right[1]), int(coin_Bottom_Right[0]+i-5)] = [255, 0, 255]
+
+        #Tracer proue
+        if((avant[x]+i-5) >= 0 and (avant[x]+i-5) <= 767):
+            imgTest[int(avant[x]+i-5), int(avant[y])] = [255, 0, 255]
+        if((avant[y]+i-5) >= 0 and (avant[y]+i-5) <= 767):
+            imgTest[int(avant[x]), int(avant[y]+i-5)] = [255, 0, 255]
+
+        #Tracer poupe droit
+        if((arriere_d[x]+i-5) >= 0 and (arriere_d[x]+i-5) <= 767):
+            imgTest[int(arriere_d[x]+i-5), int(arriere_d[y])] = [255, 255, 0]
+        if((arriere_d[y]+i-5) >= 0 and (arriere_d[y]+i-5) <= 767):
+            imgTest[int(arriere_d[x]), int(arriere_d[y]+i-5)] = [255, 255, 0]
+
+        #Tracer poupe gauche
+        if((arriere_g[x]+i-5) >= 0 and (arriere_g[x]+i-5) <= 767):
+            imgTest[int(arriere_g[x]+i-5), int(arriere_g[y])] = [0, 255, 255]
+        if((arriere_g[y]+i-5) >= 0 and (arriere_g[y]+i-5) <= 767):
+            imgTest[int(arriere_g[x]), int(arriere_g[y]+i-5)] = [0, 255, 255]
+
+    x = 1
+    y = 0
+
+    f = open(path + "/output_files/" + ImageId + ".txt", "a")
+
+    #Carré de bateau (centre + lx + ly)
+    N_x = bateau[x]/767
+    N_y = bateau[y]/767
+    N_lx = bateau_lx/767
+    N_ly = bateau_ly/767
+    f.write("1 " + str(N_x) + " " + str(N_y) + " " + str(N_lx) + " " + str(N_ly))
+    f.write("\n")
+
+    #Avant
+    N_x = avant[x]/767
+    N_y = avant[y]/767
+    N_lx = 0.005
+    N_ly = 0.005
+    f.write("0 " + str(N_x) + " " + str(N_y) + " " + str(N_lx) + " " + str(N_ly))
+    f.write("\n")
+
+    #Arrière Gauche
+    N_x = arriere_g[x]/767
+    N_y = arriere_g[y]/767
+    N_lx = 0.005
+    N_ly = 0.005
+    f.write("3 " + str(N_x) + " " + str(N_y) + " " + str(N_lx) + " " + str(N_ly))
+    f.write("\n")
+
+    #Arrière Droit
+    N_x = arriere_d[x]/767
+    N_y = arriere_d[y]/767
+    N_lx = 0.005
+    N_ly = 0.005
+    f.write("2 " + str(N_x) + " " + str(N_y) + " " + str(N_lx) + " " + str(N_ly))
+    f.write("\n")
+
+    f.close()
+
+
+
+
+
+    return 0
+
 #--------------------- function ----------------------------#
 def function(i):
     DEBUG=0 # 0 affiche que l'image, 1 affiche l'image et le test des couleurs, 2 affiche tout
@@ -726,9 +925,13 @@ def function(i):
 #-----------------------------------------------------------#
 
 #debug une image en particulier
-#algo("014586e74.jpg", 2)
+#algo("002fdcf51.jpg", 2)
+#algo("0027854cc.jpg", 2)
+#algo("00ce2c1c0.jpg", 2)
+algo("015b2962a.jpg", 2)
 
 
+"""
 
 data_lenght = len(mask_without_duplicate)
 print("Number of Images = ", data_lenght)
@@ -748,4 +951,4 @@ if __name__ == '__main__':
         pool.close()
         pool.join()
 
-        
+        """
