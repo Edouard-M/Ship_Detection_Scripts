@@ -1,0 +1,17 @@
+item {
+  id: 1
+  name: "Ship"
+  display_name: "ship"
+  keypoints {
+    id: 0
+    label: "Bow"
+  }
+  keypoints {
+    id: 1
+    label: "SternLeft"
+  }
+  keypoints {
+    id: 2
+    label: "SternRight"
+  }
+}
