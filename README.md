@@ -8,6 +8,8 @@
 The Shipmark project was initially a proposal from Airbus Defence and Space. In order to complete its former "Airbus Ship Detection Challenge" competition, this project aims to
 detect ships at sea to identify their position and direction. Using Machine Learning technology, this algorithm will be trained using a dataset of around 300,000 satellite images provided by Airbus.
 
+> A little demo available at : https://edouard-mignien.fr/shipmark/
+
 ![Idea](ressources/idea.png)
 
 ## Method used
